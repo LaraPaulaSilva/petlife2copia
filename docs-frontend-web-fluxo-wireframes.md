@@ -10,7 +10,7 @@ Este documento apresenta o **Diagrama de Fluxo (Fluxograma de Navegação)** e o
 
 ## 6.1. Diagrama de Fluxo (Fluxograma de Navegação)
 
-O fluxograma reproduz o padrão visual do diagrama do grupo, dividido em três blocos:
+O fluxograma segue o **padrão visual** de três blocos coloridos (login / tutor / veterinário), porém todo o **conteúdo — telas, ações e navegação — foi extraído diretamente do código-fonte** do frontend web (`src/frontend/petlife-web/src/`), e não de um desenho de referência:
 
 1. **Login e Cadastro** (azul) — ponto de entrada comum a todos os usuários.
 2. **Fluxo do Tutor** (roxo) — jornada do dono do pet.
@@ -18,32 +18,32 @@ O fluxograma reproduz o padrão visual do diagrama do grupo, dividido em três b
 
 ### 6.1.1. Bloco 1 — Login e Cadastro
 
-Fluxo de entrada no aplicativo até a bifurcação por perfil. Rotas reais: `/` (Home), `/login`, `/register`, `/register-role`.
+Fluxo de entrada no aplicativo até a bifurcação por perfil, conforme `HomePage.tsx`, `LoginPage.tsx`, `RegisterPage.tsx` e `RegisterRole.tsx`. Observação fiel ao código: após o login/cadastro, se o usuário ainda não escolheu o perfil (`hasPickedRole !== "true"`), ele é levado à tela de **escolha de perfil** (`/register-role`); o redirecionamento final (`/tutor` ou `/vet`) é decidido pela `role` (`"Tutor"` / `"Veterinário"`).
 
 ```mermaid
 flowchart TD
-    inicio(["INÍCIO"]) --> entra["Usuário entra<br/>no aplicativo"]
+    inicio(["INÍCIO"]) --> entra["Usuário entra no<br/>aplicativo (/ Home)"]
     entra --> cadastrado{"Está<br/>cadastrado?"}
 
-    cadastrado -->|Não| fazCad["Fazer cadastro"]
-    cadastrado -->|Sim| esqueceu{"Esqueceu<br/>a senha?"}
+    cadastrado -->|Não| fazCad["Fazer cadastro<br/>(/register)"]
+    cadastrado -->|Sim| credenciais["Usuário insere<br/>credenciais (/login)"]
 
-    esqueceu -->|Sim| email["Envio de e-mail<br/>para criação de<br/>nova senha"]
-    esqueceu -->|Não| credenciais["Usuário insere<br/>credenciais"]
-    fazCad --> credenciais
-    email --> credenciais
+    fazCad --> escolhePerfil["Escolhe o perfil<br/>(/register-role)"]
+    credenciais --> jaEscolheu{"Já escolheu<br/>o perfil?"}
+    jaEscolheu -->|Não| escolhePerfil
+    jaEscolheu -->|Sim| ehVet{"Perfil do<br/>usuário?"}
+    escolhePerfil --> ehVet
 
-    credenciais --> ehVet{"Usuário é<br/>veterinário?"}
-    ehVet -->|Não| logaTutor["Usuário loga<br/>como tutor"]
-    ehVet -->|Sim| logaVet["Usuário loga<br/>como<br/>veterinário"]
+    ehVet -->|Tutor| logaTutor["Usuário loga<br/>como tutor<br/>(/tutor)"]
+    ehVet -->|Veterinário| logaVet["Usuário loga<br/>como veterinário<br/>(/vet)"]
 
     classDef topo fill:#dbeafe,stroke:#60a5fa,color:#1e3a8a;
     classDef decisao fill:#eff6ff,stroke:#60a5fa,color:#1e3a8a;
     classDef inicioFim fill:#60a5fa,stroke:#2563eb,color:#ffffff;
     classDef logT fill:#ede9fe,stroke:#a78bfa,color:#4c1d95;
     classDef logV fill:#ffedd5,stroke:#fb923c,color:#7c2d12;
-    class entra,fazCad,email,credenciais topo;
-    class cadastrado,esqueceu,ehVet decisao;
+    class entra,fazCad,credenciais,escolhePerfil topo;
+    class cadastrado,jaEscolheu,ehVet decisao;
     class inicio inicioFim;
     class logaTutor logT;
     class logaVet logV;
@@ -51,99 +51,111 @@ flowchart TD
 
 ### 6.1.2. Bloco 2 — Fluxo do Tutor
 
-Jornada do tutor a partir do login. A coluna central representa as **páginas** acessadas; as caixas à esquerda representam as **ações** realizadas em cada página. Cobre as histórias **TUT-01 a TUT-10**.
+Jornada do tutor a partir do login, cobrindo **todas as telas e ações implementadas** no código (menu `Sidebar.tsx` + rotas em `AppRouter.tsx`). A coluna central são as **páginas**; as caixas à direita são as **ações** de cada página. Cobre as histórias **TUT-01 a TUT-10**.
 
 ```mermaid
 flowchart LR
-    logaTutor["Usuário loga<br/>como tutor"] --> inicioT["Página inicial"]
+    logaTutor["Usuário loga<br/>como tutor"] --> inicioT["Página inicial<br/>(/tutor)"]
 
-    %% paginas (coluna central) -> acoes (coluna esquerda)
-    inicioT --> p1["Acessa página de<br/>exames e consultas"]
-    p1 --> a1["Adiciona, edita e deleta<br/>exames, consultas,<br/>posologia, vacinas"]
+    %% ===== Início: dashboard =====
+    inicioT --> dash1["Visualiza 'Pet em destaque',<br/>alertas e atualizações clínicas"]
+    inicioT --> notifT["Acessa notificações<br/>(/tutor/notificacoes)"]
 
-    inicioT --> p2["Acessa página<br/>do diário"]
-    p2 --> a2["Adiciona, edita e deleta<br/>dados do diário do pet"]
+    %% ===== Meus Pets =====
+    inicioT --> pets["Acessa 'Meus Pets'<br/>(/tutor/pets)"]
+    pets --> novoPet["Cadastra novo pet<br/>(/tutor/pets/novo)"]
+    pets --> editaPet["Visualiza / edita / exclui<br/>perfil do pet (/editar)"]
+    pets --> prontT["Abre o prontuário do pet<br/>(/tutor/pets/:id/tratamentos)"]
 
-    inicioT --> p3["Visualiza alertas<br/>e lembretes"]
+    %% ===== Prontuário (abas) =====
+    prontT --> trT["Tratamentos: visualiza e dá check<br/>na administração do medicamento"]
+    prontT --> vacT["Vacinas: visualiza vacinas<br/>e registra doses"]
+    prontT --> consT["Consultas: visualiza consultas<br/>e diagnósticos"]
+    prontT --> docT["Documentos: anexa e visualiza<br/>exames e laudos"]
+    prontT --> diaT["Diário: adiciona, edita e exclui<br/>registros (/diario/novo)"]
 
-    inicioT --> p4["Acessa/Visualiza página<br/>de medicamentos"]
-    p4 --> a4["Dá check no registro de<br/>administração do<br/>medicamento"]
+    %% ===== Buscar + compartilhar =====
+    inicioT --> buscar["Busca veterinários<br/>(/tutor/buscar)"]
+    buscar --> selVet["Seleciona profissional"]
+    selVet --> compart["Compartilha o perfil do pet<br/>com o veterinário"]
 
-    inicioT --> p5["Visualiza 'Pet<br/>do dia'"]
+    %% ===== Calendário =====
+    inicioT --> calT["Acessa calendário<br/>(/tutor/calendario)"]
+    calT --> evento["Cria / edita eventos de rotina<br/>(vacina, consulta, tosa, etc.)"]
 
-    inicioT --> p6["Acessa página de<br/>exames e consultas"]
-    p6 --> a6["Visualiza exames e<br/>consultas do pet com<br/>resultados e relatórios"]
-
-    inicioT --> p7["Visualiza/acessa<br/>atualizações<br/>recentes"]
-
-    inicioT --> p8["Acessa página<br/>de vacinas"]
-    p8 --> a8["Visualiza vacinas que o<br/>pet tomou"]
-
-    inicioT --> p9["Acessa página<br/>de notificações"]
-
-    inicioT --> p10["Cadastrar novo<br/>pet"]
-    p10 --> a10["Visualiza/edita/deleta<br/>perfil de pet"]
-
-    inicioT --> p11["Visualiza/acessa<br/>pets<br/>cadastrados"]
-    p11 --> a11["Visualiza/edita/deleta<br/>dados pessoais"]
-    p11 --> a11b["Envia solicitação de<br/>compartilhamento do<br/>perfil do pet"]
-
-    inicioT --> p12["Acessa página<br/>de perfil pessoal"]
-    p12 --> desloga["Desloga da conta"]
-    desloga --> fimT(["FIM"])
+    %% ===== Perfil + logout =====
+    inicioT --> perfilT["Acessa perfil pessoal<br/>(/tutor/perfil)"]
+    perfilT --> dadosT["Altera dados pessoais"]
+    inicioT --> deslogaT["Desloga da conta"]
+    deslogaT --> fimT(["FIM"])
 
     classDef tutor fill:#ede9fe,stroke:#a78bfa,color:#4c1d95;
     classDef acaoT fill:#f5f3ff,stroke:#c4b5fd,color:#4c1d95;
     classDef logT fill:#ddd6fe,stroke:#8b5cf6,color:#4c1d95;
     classDef inicioFimT fill:#a78bfa,stroke:#7c3aed,color:#ffffff;
-    class inicioT,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12 tutor;
-    class a1,a2,a4,a6,a8,a10,a11,a11b,desloga acaoT;
+    class inicioT,pets,prontT,buscar,calT,perfilT,notifT tutor;
+    class dash1,novoPet,editaPet,trT,vacT,consT,docT,diaT,selVet,compart,evento,dadosT,deslogaT acaoT;
     class logaTutor logT;
     class fimT inicioFimT;
 ```
 
-> **Fidelidade:** os rótulos reproduzem o fluxograma do grupo. No código, "Dá check no registro de administração" corresponde à marcação de dose na página de tratamentos; "Envia solicitação de compartilhamento" corresponde ao botão **Compartilhar** em *Meus Pets* (`POST /api/shares/createshare`).
+> **Fidelidade ao código:**
+> - "Busca veterinários" (`SearchPage`) procura **profissionais** por nome/endereço/CRMV; ao selecionar um vet, o tutor **compartilha** o pet com ele (`SharePetButton` → `POST /api/shares/createshare`).
+> - O **Diário** é a única aba em que a criação de registros é **exclusiva do tutor** (botão escondido para o vet).
+> - "Dá check na administração do medicamento" corresponde à marcação de dose na página de **Tratamentos**.
+> - Os itens **Notificações** e **Perfil** existem no menu, mas ainda **não têm rota dedicada** (ver nota em 6.1.4).
 
 ### 6.1.3. Bloco 3 — Fluxo do Veterinário
 
-Jornada do veterinário a partir do login. A coluna central representa as **páginas** acessadas; as caixas à direita representam as **ações** realizadas em cada página. Cobre as histórias **VET-01 a VET-10**.
+Jornada do veterinário a partir do login, cobrindo **todas as telas e ações implementadas** (menu `VetSidebar.tsx` + rotas em `AppRouter.tsx`). A coluna central são as **páginas**; as caixas à direita são as **ações**. Cobre as histórias **VET-01 a VET-10**.
 
 ```mermaid
 flowchart LR
-    logaVet["Usuário loga<br/>como<br/>veterinário"] --> inicioV["Página inicial"]
+    logaVet["Usuário loga<br/>como veterinário"] --> inicioV["Página inicial<br/>(/vet)"]
 
-    inicioV --> pv1["Acessa perfil do<br/>paciente"]
-    pv1 --> av1["Visualiza diário do<br/>paciente atualizado pelo<br/>tutor"]
-    pv1 --> av2["Acessa/adiciona/edita/deleta<br/>os exames do paciente"]
-    pv1 --> av3["Acessa/adiciona/edita/deleta<br/>as medicações do paciente"]
-    pv1 --> av4["Acessa/adiciona/edita/deleta<br/>as vacinas do paciente"]
-    pv1 --> av5["Visualiza informações<br/>gerais do paciente e<br/>histórico"]
+    %% ===== Início: dashboard =====
+    inicioV --> dashV["Visualiza total de pacientes<br/>e busca por nome/tutor/espécie"]
+    inicioV --> notifV["Acessa notificações<br/>(/vet/notificacoes)"]
 
-    inicioV --> pv2["Acessa<br/>notificações"]
-    pv2 --> av6["Visualiza notificações de<br/>alterações dos dados dos<br/>pacientes"]
+    %% ===== Pacientes =====
+    inicioV --> pacientes["Acessa 'Pacientes'<br/>(/vet/pacientes)"]
+    pacientes --> novoPac["Vincula novo paciente via<br/>código de compartilhamento"]
+    pacientes --> abrirPront["Abre o prontuário do paciente<br/>(/vet/pacientes/:id/consultas)"]
 
-    inicioV --> pvRel["Acessa página<br/>de relatórios"]
-    pvRel --> avRel1["Cria, edita e deleta<br/>modelos de relatório"]
-    pvRel --> avRel2["Gera e baixa relatório<br/>em PDF"]
+    %% ===== Prontuário (abas) =====
+    abrirPront --> consV["Consultas: adiciona, edita e<br/>exclui consultas e diagnósticos"]
+    abrirPront --> vacV["Vacinas: adiciona, edita e<br/>exclui vacinas do paciente"]
+    abrirPront --> trV["Tratamentos: adiciona, edita e<br/>exclui medicações do paciente"]
+    abrirPront --> docV["Documentos: adiciona, edita e<br/>exclui exames e laudos"]
+    abrirPront --> diaV["Diário: visualiza registros<br/>do tutor (somente leitura)"]
 
-    inicioV --> pv3["Acessa página<br/>de perfil pessoal"]
-    pv3 --> av7["Aceita/recusa solicitação<br/>de vínculo com pet"]
-    pv3 --> altera["Altera dados<br/>pessoais"]
-    pv3 --> vinculo["Visualiza vínculo<br/>com pacientes"]
-    pv3 --> deslogaV["Desloga da<br/>conta"]
+    %% ===== Relatórios =====
+    inicioV --> relV["Acessa relatórios<br/>(/vet/relatorios)"]
+    relV --> relTpl["Cria, edita e exclui<br/>modelos de relatório"]
+    relV --> relPdf["Gera e baixa relatório<br/>em PDF"]
+
+    %% ===== Calendário / Perfil / logout =====
+    inicioV --> calV["Acessa calendário<br/>(/vet/calendario)"]
+    inicioV --> perfilV["Acessa perfil pessoal<br/>(/vet/perfil)"]
+    perfilV --> dadosV["Altera dados pessoais"]
+    inicioV --> deslogaV["Desloga da conta"]
     deslogaV --> fimV(["FIM"])
 
     classDef vet fill:#ffedd5,stroke:#fb923c,color:#7c2d12;
     classDef acaoV fill:#fff7ed,stroke:#fdba74,color:#7c2d12;
     classDef logV fill:#fed7aa,stroke:#f97316,color:#7c2d12;
     classDef inicioFimV fill:#fb923c,stroke:#ea580c,color:#ffffff;
-    class inicioV,pv1,pv2,pvRel,pv3 vet;
-    class av1,av2,av3,av4,av5,av6,avRel1,avRel2,av7,altera,vinculo,deslogaV acaoV;
+    class inicioV,pacientes,abrirPront,relV,calV,perfilV,notifV vet;
+    class dashV,novoPac,consV,vacV,trV,docV,diaV,relTpl,relPdf,dadosV,deslogaV acaoV;
     class logaVet logV;
     class fimV inicioFimV;
 ```
 
-> **Fidelidade:** os rótulos reproduzem o fluxograma do grupo. No código, as ações de exames/medicações/vacinas correspondem às abas do prontuário (`/vet/pacientes/:petId/...`) com edição habilitada (`isVet = true`); o diário é exibido em **somente leitura** (sem botão de novo registro).
+> **Fidelidade ao código:**
+> - O vínculo de paciente usa o **código de compartilhamento** gerado pelo tutor (`redeemPatientShareCode` → `POST /api/shares/redeemsharecode`).
+> - Consultas, Vacinas, Tratamentos e Documentos são **editáveis** pelo vet; o **Diário** é **somente leitura**.
+> - **Relatórios** (`ReportsPage`) permite CRUD de modelos e geração/download de PDF.
+> - Os itens **Calendário**, **Notificações** e **Perfil** existem no menu, mas ainda **não têm rota dedicada** (ver nota em 6.1.4).
 
 ### 6.1.4. Mapa Global de Rotas (fiel ao `AppRouter.tsx`)
 
