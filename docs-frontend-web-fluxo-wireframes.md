@@ -4,245 +4,261 @@
 > **Etapa / Rubrica:** Tarefa `T1.8` — **H37a** (Wireframes do Frontend Web e Fluxograma de Navegação)
 > **Perfis do sistema:** **Tutor** e **Veterinário**
 
-Este documento apresenta o **Diagrama de Fluxo (Fluxograma de Navegação)** e os **Wireframes** das telas do frontend web do PetLife. Os diagramas estão em [Mermaid](https://mermaid.js.org/), renderizados automaticamente pelo GitHub, e os wireframes usam diagramação textual (ASCII) versionável, mantendo coerência com os requisitos funcionais (RF-01 a RF-12) e as histórias de usuário (TUT-01 a TUT-10 e VET-01 a VET-10) descritos em [`docs/contexto.md`](contexto.md).
+Este documento apresenta o **Diagrama de Fluxo (Fluxograma de Navegação)** e os **Wireframes** das telas do frontend web do PetLife. Os diagramas estão em [Mermaid](https://mermaid.js.org/) (renderizados automaticamente pelo GitHub) e **refletem fielmente as rotas e telas implementadas** em `src/frontend/petlife-web/src/` — em especial o arquivo de rotas `src/routes/AppRouter.tsx` e os menus de navegação `Sidebar.tsx` (Tutor) e `VetSidebar.tsx` (Veterinário).
 
 ---
 
 ## 6.1. Diagrama de Fluxo (Fluxograma de Navegação)
 
-### 6.1.1. Fluxo Macro — Autenticação e Roteamento por Perfil
+O fluxograma é dividido em três blocos, seguindo a jornada real do sistema:
 
-O fluxograma abaixo descreve a jornada de entrada no sistema: a partir da tela de login, o JWT emitido pelo backend carrega a *claim* `role`, que direciona o usuário para o dashboard correspondente (`/tutor` ou `/vet`). As rotas privadas são protegidas por *route guards* que validam o token antes de renderizar cada página.
+1. **Login e Cadastro** — ponto de entrada comum a todos os usuários.
+2. **Fluxo do Tutor** — jornada do dono do pet.
+3. **Fluxo do Veterinário** — jornada do profissional.
 
-```mermaid
-flowchart TD
-    start(["Acesso à aplicação web"]) --> auth{"Possui sessão<br/>válida JWT?"}
-    auth -->|Não| login["Tela de Login<br/>/login"]
-    auth -->|Sim| role{"Perfil do<br/>usuário (role)"}
+### 6.1.1. Bloco 1 — Login e Cadastro
 
-    login --> cad{"Possui conta?"}
-    cad -->|Não| signup["Tela de Cadastro<br/>/cadastro"]
-    signup --> login
-    login -->|Credenciais inválidas| erroLogin["Exibe mensagem de erro"]
-    erroLogin --> login
-    login -->|"POST /api/users/login OK"| role
-
-    role -->|Tutor| dashTutor["Dashboard do Tutor<br/>/tutor"]
-    role -->|Veterinário| dashVet["Dashboard do Veterinário<br/>/vet"]
-
-    dashTutor --> areaTutor[["Área do Tutor"]]
-    dashVet --> areaVet[["Área do Veterinário"]]
-
-    areaTutor --> logout["Logout<br/>limpa AuthContext"]
-    areaVet --> logout
-    logout --> login
-```
-
-### 6.1.2. Fluxo de Navegação — Área do Tutor
-
-Cobre as histórias **TUT-01 a TUT-10**. O tutor tem acesso de escrita ao perfil do pet, diário, rotina, documentos, agenda e compartilhamento, e acesso de **leitura/confirmação** sobre vacinas e tratamentos prescritos pelo veterinário.
+Fluxo de entrada no aplicativo até a bifurcação por perfil. Rotas reais: `/` (Home), `/login`, `/register`, `/register-role`.
 
 ```mermaid
 flowchart TD
-    dashTutor["Dashboard do Tutor<br/>/tutor"] --> navT{"Menu lateral<br/>(Sidebar Tutor)"}
+    inicio(["INÍCIO"]) --> entra["Usuário entra<br/>no aplicativo"]
+    entra --> cadastrado{"Está<br/>cadastrado?"}
 
-    navT --> meusPets["Meus Pets<br/>/tutor/pets"]
-    navT --> agendaT["Agenda / Consultas<br/>/tutor/agenda"]
-    navT --> contatosT["Contatos e Compartilhamento<br/>/tutor/contatos"]
-    navT --> perfilT["Minha Conta<br/>/tutor/perfil"]
+    cadastrado -->|Não| fazCad["Fazer cadastro<br/>/register + /register-role"]
+    cadastrado -->|Sim| esqueceu{"Esqueceu<br/>a senha?"}
 
-    meusPets --> novoPet["Cadastrar Pet<br/>(modal / form)"]
-    meusPets --> detPet["Perfil do Pet<br/>/tutor/pets/:petId"]
-    novoPet --> detPet
+    esqueceu -->|Sim| email["Envio de e-mail para<br/>criação de nova senha"]
+    esqueceu -->|Não| credenciais["Usuário insere<br/>credenciais (/login)"]
+    fazCad --> credenciais
+    email --> credenciais
 
-    detPet --> vacinasT["Vacinas<br/>visualizar + confirmar dose"]
-    detPet --> tratT["Tratamentos<br/>marcar dose administrada"]
-    detPet --> docsT["Documentos e Exames<br/>upload / visualizar"]
-    detPet --> histT["Histórico Clínico<br/>linha do tempo"]
-    detPet --> diarioT["Diário do Pet<br/>CRUD sintomas / rotina"]
-    detPet --> rotinaT["Rotina e Cuidados<br/>banho, tosa, recorrência"]
-    detPet --> editPet["Editar / Excluir Pet"]
+    credenciais --> ehVet{"Usuário é<br/>veterinário?"}
+    ehVet -->|Não| logaTutor["Usuário loga<br/>como tutor (/tutor)"]
+    ehVet -->|Sim| logaVet["Usuário loga como<br/>veterinário (/vet)"]
 
-    contatosT --> compartilhar["Gerar código de<br/>compartilhamento (8 dígitos)"]
-    agendaT --> novaConsultaT["Agendar / Cancelar Consulta"]
-
-    classDef leitura fill:#fff3e0,stroke:#fb8c00,color:#5d4037;
-    classDef escrita fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
-    class vacinasT,tratT,histT leitura;
-    class novoPet,detPet,docsT,diarioT,rotinaT,editPet,compartilhar,novaConsultaT escrita;
+    classDef topo fill:#dbeafe,stroke:#60a5fa,color:#1e3a8a;
+    classDef decisao fill:#eff6ff,stroke:#60a5fa,color:#1e3a8a;
+    classDef inicioFim fill:#60a5fa,stroke:#2563eb,color:#ffffff;
+    class entra,fazCad,email,credenciais,logaTutor,logaVet topo;
+    class cadastrado,esqueceu,ehVet decisao;
+    class inicio inicioFim;
 ```
 
-> 🟧 **Laranja (leitura/confirmação):** o tutor visualiza e confirma, mas **não edita** a prescrição.
-> 🟩 **Verde (escrita):** o tutor cria, edita e exclui livremente.
+### 6.1.2. Bloco 2 — Fluxo do Tutor
 
-### 6.1.3. Fluxo de Navegação — Área do Veterinário
-
-Cobre as histórias **VET-01 a VET-10**. O veterinário acessa pacientes compartilhados, prescreve vacinas e tratamentos, registra consultas/diagnósticos e **visualiza** (sem editar) o diário e a rotina criados pelo tutor.
+Jornada do tutor a partir do login. Todas as rotas abaixo existem em `AppRouter.tsx`; os itens do menu lateral vêm de `Sidebar.tsx`. Cobre as histórias **TUT-01 a TUT-10**.
 
 ```mermaid
 flowchart TD
-    dashVet["Dashboard do Veterinário<br/>/vet"] --> navV{"Menu lateral<br/>(VetSidebar)"}
+    logaTutor["Usuário loga<br/>como tutor"] --> inicioT["Página inicial<br/>/tutor"]
 
-    navV --> pacientes["Gestão de Pacientes<br/>/vet/pacientes"]
-    navV --> agendaV["Minhas Consultas<br/>/vet/agenda"]
-    navV --> perfilV["Minha Conta (CRMV)<br/>/vet/perfil"]
+    inicioT --> pets["Acessa página de pets<br/>cadastrados (/tutor/pets)"]
+    inicioT --> destaque["Visualiza 'Pet do dia'<br/>e lembretes"]
+    inicioT --> recentes["Visualiza/acessa<br/>atualizações recentes"]
+    inicioT --> notif["Acessa página de<br/>notificações"]
+    inicioT --> buscar["Busca pets<br/>(/tutor/buscar)"]
+    inicioT --> calendarioT["Acessa calendário<br/>(/tutor/calendario)"]
+    inicioT --> perfilT["Acessa página de<br/>perfil pessoal"]
 
-    pacientes --> novoPac["Vincular Paciente<br/>modal: código 8 dígitos"]
-    pacientes --> prontuario["Prontuário do Paciente<br/>/vet/pacientes/:petId"]
-    novoPac --> prontuario
+    pets --> novoPet["Cadastrar novo pet<br/>(/tutor/pets/novo)"]
+    pets --> editaPet["Visualiza/edita/deleta<br/>perfil de pet (/editar)"]
+    pets --> compartilhar["Envia solicitação de<br/>compartilhamento do perfil do pet"]
+    pets --> prontuarioT["Ver prontuário<br/>/tutor/pets/:petId/tratamentos"]
 
-    prontuario --> consultasV["Consultas e Diagnósticos<br/>CRUD"]
-    prontuario --> vacinasV["Vacinas<br/>prescrever + próxima dose"]
-    prontuario --> tratV["Tratamentos<br/>medicamento, dose, duração"]
-    prontuario --> examesV["Exames e Documentos<br/>CRUD"]
-    prontuario --> histV["Histórico Clínico<br/>linha do tempo"]
-    prontuario --> diarioV["Diário do Pet<br/>somente leitura"]
-    prontuario --> rotinaV["Rotina do Pet<br/>somente leitura"]
-    prontuario --> dadosV["Dados cadastrais do pet<br/>somente leitura"]
+    prontuarioT --> vacinasT["Acessa página de vacinas<br/>visualiza vacinas que o pet tomou"]
+    prontuarioT --> medsT["Acessa página de tratamentos<br/>dá check na administração do medicamento"]
+    prontuarioT --> consultasT["Acessa página de exames e consultas<br/>visualiza resultados e relatórios"]
+    prontuarioT --> docsT["Acessa página de documentos<br/>adiciona/visualiza exames"]
+    prontuarioT --> diarioT["Acessa página do diário<br/>adiciona, edita e deleta registros (/diario)"]
 
-    agendaV --> abrirProntuario["Abrir prontuário do<br/>paciente da consulta"]
-    abrirProntuario --> prontuario
+    perfilT --> dadosT["Altera dados pessoais"]
+    perfilT --> logoutT["Desloga da conta"]
+    logoutT --> fimT(["FIM"])
 
-    classDef leitura fill:#e1f5fe,stroke:#039be5,color:#01579b;
-    classDef escrita fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
-    class diarioV,rotinaV,dadosV leitura;
-    class consultasV,vacinasV,tratV,examesV,novoPac escrita;
+    classDef tutor fill:#ede9fe,stroke:#a78bfa,color:#4c1d95;
+    classDef acaoT fill:#f5f3ff,stroke:#a78bfa,color:#4c1d95;
+    classDef inicioFimT fill:#a78bfa,stroke:#7c3aed,color:#ffffff;
+    class inicioT,pets,notif,buscar,calendarioT,perfilT,prontuarioT tutor;
+    class destaque,recentes,novoPet,editaPet,compartilhar,vacinasT,medsT,consultasT,docsT,diarioT,dadosT,logoutT acaoT;
+    class fimT inicioFimT;
 ```
 
-> 🟦 **Azul (somente leitura):** diário, rotina e dados cadastrais pertencem ao tutor.
-> 🟩 **Verde (escrita):** prescrições, consultas, exames e vínculo de pacientes.
+> **Permissões do Tutor (conforme código):** no **Diário** o botão "+ Novo registro" só aparece para o tutor (`{!isVet && ...}`); vacinas, tratamentos, consultas e documentos são exibidos com a flag `isVet` que controla a edição item a item.
 
-### 6.1.4. Mapa Global de Rotas
+### 6.1.3. Bloco 3 — Fluxo do Veterinário
+
+Jornada do veterinário a partir do login. Rotas de `AppRouter.tsx` e menu de `VetSidebar.tsx`. Cobre as histórias **VET-01 a VET-10**.
+
+```mermaid
+flowchart TD
+    logaVet["Usuário loga como<br/>veterinário"] --> inicioV["Página inicial<br/>/vet"]
+
+    inicioV --> pacientes["Acessa pacientes<br/>(/vet/pacientes)"]
+    inicioV --> novoPac["Vincula paciente via código<br/>(/vet/pacientes/novo)"]
+    inicioV --> calendarioV["Acessa calendário<br/>(/vet/calendario)"]
+    inicioV --> notifV["Acessa notificações"]
+    inicioV --> relatorios["Acessa relatórios<br/>(/vet/relatorios)"]
+    inicioV --> perfilV["Acessa página de<br/>perfil pessoal"]
+
+    pacientes --> prontuarioV["Abre prontuário do paciente<br/>/vet/pacientes/:petId/consultas"]
+
+    prontuarioV --> consultasV["Acessa/adiciona/edita/deleta<br/>consultas e diagnósticos"]
+    prontuarioV --> vacinasV["Acessa/adiciona/edita/deleta<br/>vacinas do paciente"]
+    prontuarioV --> medsV["Acessa/adiciona/edita/deleta<br/>medicações do paciente"]
+    prontuarioV --> examesV["Acessa/adiciona/edita/deleta<br/>exames e documentos do paciente"]
+    prontuarioV --> diarioV["Visualiza diário do paciente<br/>atualizado pelo tutor (somente leitura)"]
+
+    perfilV --> dadosV["Altera dados pessoais"]
+    perfilV --> vinculoV["Visualiza vínculo com pacientes"]
+    perfilV --> logoutV["Desloga da conta"]
+    logoutV --> fimV(["FIM"])
+
+    classDef vet fill:#ffedd5,stroke:#fb923c,color:#7c2d12;
+    classDef acaoV fill:#fff7ed,stroke:#fb923c,color:#7c2d12;
+    classDef inicioFimV fill:#fb923c,stroke:#ea580c,color:#ffffff;
+    class inicioV,pacientes,calendarioV,notifV,relatorios,perfilV,prontuarioV vet;
+    class novoPac,consultasV,vacinasV,medsV,examesV,diarioV,dadosV,vinculoV,logoutV acaoV;
+    class fimV inicioFimV;
+```
+
+> **Permissões do Veterinário (conforme código):** o diário é exibido em **somente leitura** (sem botão de novo registro); vacinas, tratamentos, consultas e documentos são editáveis (`isVet = true`).
+
+### 6.1.4. Mapa Global de Rotas (fiel ao `AppRouter.tsx`)
 
 ```mermaid
 flowchart LR
-    root(["/"]) --> login["/login"]
-    root --> signup["/cadastro"]
+    home(["/"]) --> login["/login"]
+    home --> register["/register"]
+    home --> registerRole["/register-role"]
 
-    login --> tutor["/tutor<br/>(privada - Tutor)"]
-    login --> vet["/vet<br/>(privada - Vet)"]
+    login --> tutor["/tutor"]
+    login --> vet["/vet"]
 
-    tutor --> tpets["/tutor/pets"]
-    tpets --> tpet["/tutor/pets/:petId"]
-    tutor --> tagenda["/tutor/agenda"]
-    tutor --> tcontatos["/tutor/contatos"]
-    tutor --> tperfil["/tutor/perfil"]
+    subgraph TUTOR [Rotas do Tutor]
+        tutor --> tpets["/tutor/pets"]
+        tpets --> tnovo["/tutor/pets/novo"]
+        tpets --> teditar["/tutor/pets/:petId/editar"]
+        tpets --> ttrat["/tutor/pets/:petId/tratamentos"]
+        tpets --> tvac["/tutor/pets/:petId/vacinas"]
+        tpets --> tcons["/tutor/pets/:petId/consultas"]
+        tpets --> tdoc["/tutor/pets/:petId/documentos"]
+        tpets --> tdiario["/tutor/pets/:petId/diario"]
+        tdiario --> tdiarionovo["/tutor/pets/:petId/diario/novo"]
+        tutor --> tcal["/tutor/calendario"]
+        tutor --> tbuscar["/tutor/buscar"]
+    end
 
-    vet --> vpac["/vet/pacientes"]
-    vpac --> vpront["/vet/pacientes/:petId/consultas"]
-    vet --> vagenda["/vet/agenda"]
-    vet --> vperfil["/vet/perfil"]
+    subgraph VET [Rotas do Veterinário]
+        vet --> vpac["/vet/pacientes"]
+        vpac --> vnovo["/vet/pacientes/novo"]
+        vpac --> vcons["/vet/pacientes/:petId/consultas"]
+        vpac --> vvac["/vet/pacientes/:petId/vacinas"]
+        vpac --> vtrat["/vet/pacientes/:petId/tratamentos"]
+        vpac --> vdoc["/vet/pacientes/:petId/documentos"]
+        vpac --> vdiario["/vet/pacientes/:petId/diario"]
+        vet --> vrel["/vet/relatorios"]
+    end
 ```
+
+> ⚠️ **Nota de fidelidade:** os menus laterais (`Sidebar.tsx` / `VetSidebar.tsx`) incluem os itens **Notificações** (`/tutor/notificacoes`, `/vet/notificacoes`), **Perfil** (`/tutor/perfil`, `/vet/perfil`) e **Calendário do Vet** (`/vet/calendario`). Esses caminhos **ainda não possuem `<Route>` dedicada** no `AppRouter.tsx` e caem nas rotas coringa `/tutor/*` e `/vet/*` (que renderizam a página inicial). Eles aparecem no fluxograma porque estão no menu, mas estão sinalizados aqui como pendentes de implementação de rota.
 
 ---
 
 ## 6.2. Wireframes do Frontend Web
 
-Os wireframes a seguir representam a estrutura (lo-fi) das telas-chave em resolução **desktop**. O layout é responsivo (RNF-02): em telas menores a *sidebar* colapsa em menu hambúrguer e os *grids* reduzem para uma coluna.
+Wireframes (lo-fi) das telas-chave em resolução **desktop**, baseados nas páginas reais em `src/pages/`. O layout é responsivo (RNF-02): em telas menores a *sidebar* colapsa e os *grids* reduzem para uma coluna.
 
-### 6.2.1. Tela de Login (`/login`)
+### 6.2.1. Tela de Login (`/login` — `LoginPage.tsx`)
 
 ```text
 +--------------------------------------------------------------+
-|                                                              |
 |                      🐾  PetLife                             |
 |            Prontuário de saúde do seu pet                    |
-|                                                              |
 |          +----------------------------------------+          |
 |          |  E-mail                                 |         |
 |          |  [____________________________________] |         |
-|          |                                         |         |
 |          |  Senha                                  |         |
 |          |  [____________________________________] |         |
-|          |                                         |         |
-|          |  [ ] Lembrar-me      Esqueci a senha >  |         |
-|          |                                         |         |
 |          |        [      ENTRAR      ]             |         |
-|          |                                         |         |
 |          |  --------  ou  ----------               |         |
 |          |  Não tem conta?  Cadastre-se >          |         |
 |          +----------------------------------------+          |
-|                                                              |
 +--------------------------------------------------------------+
 ```
-**Elementos:** campos e-mail/senha, botão Entrar (POST `/api/users/login`), link para cadastro, mensagens de erro inline (credenciais inválidas). Relaciona-se a **TUT-01 / VET-01**.
+**Elementos:** campos e-mail/senha, botão Entrar (`POST /api/users/login`), link para `/register`. Após o cadastro, `/register-role` define o perfil. Relaciona-se a **TUT-01 / VET-01**.
 
-### 6.2.2. Dashboard do Tutor (`/tutor`)
+### 6.2.2. Dashboard do Tutor (`/tutor` — `TutorHomePage.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
 |  🐾 PetLife       |  Olá, Helena 👋            [🔔 3]     [ Sair ]       |
 |                   +------------------------------------------------------+
-|  [▸] Início       |                                                      |
-|  [ ] Meus Pets    |  +------------------------+  +--------------------+  |
-|  [ ] Agenda       |  |  PET EM DESTAQUE       |  |  ALERTAS           |  |
-|  [ ] Contatos     |  |  +------+ Bob          |  |  🔴 Vacina vence   |  |
-|  [ ] Minha Conta  |  |  | foto | Cão · 11a    |  |     em 2 dias      |  |
-|                   |  |  +------+ 8,2 kg       |  |  🟡 Dose Dipirona  |  |
-|                   |  |  Próx. vacina: 05/11   |  |     às 20h         |  |
-|                   |  |  Medicação: Dipirona   |  |  🟢 Exame anexado  |  |
-|  +-------------+  |  |  [ Ver prontuário ]    |  +--------------------+  |
-|  | 👤 Helena   |  |  +------------------------+                          |
-|  | Tutor       |  |                                                      |
-|  | [ Logout ]  |  |  ATUALIZAÇÕES CLÍNICAS RECENTES                      |
-|  +-------------+  |  • Dr. Mariana registrou vacina V10  — 01/11        |
-|                   |  • Laudo hemograma adicionado         — 28/10       |
+|  [▸] Início       |  +------------------------+  +--------------------+  |
+|  [ ] Meus Pets    |  |  PET EM DESTAQUE       |  |  ALERTAS           |  |
+|  [ ] Calendário   |  |  +------+ Bob          |  |  🔴 Vacina vence   |  |
+|  [ ] Notificações |  |  | foto | Cão · 11a    |  |  🟡 Dose Dipirona  |  |
+|  [ ] Buscar       |  |  +------+ 8,2 kg       |  |  🟢 Exame anexado  |  |
+|  [ ] Perfil       |  |  [ Ver prontuário ]    |  +--------------------+  |
+|  +-------------+  |  +------------------------+                          |
+|  | 👤 Helena   |  |  ATUALIZAÇÕES CLÍNICAS RECENTES                      |
+|  | Tutor       |  |  • Vacina V10 registrada  — 01/11                   |
+|  | [ Sair ]    |  |  • Laudo hemograma anexado — 28/10                  |
+|  +-------------+  |                                                      |
 +-------------------+------------------------------------------------------+
 ```
-**Elementos:** saudação dinâmica, badge de notificações, `FeaturedPetCard`, `AlertsList` (códigos de urgência), `VetUpdatesList`, logout. Relaciona-se a **TUT-02/03/04**.
+**Elementos:** saudação dinâmica, badge de notificações (link `/tutor/notificacoes`), `FeaturedPetCard` (foto, espécie, idade, peso; botão leva a `/tutor/pets/:id/editar`), listas de alertas e atualizações. Menu lateral: Início, Meus Pets, Calendário, Notificações, Buscar, Perfil. Relaciona-se a **TUT-02/03/04**.
 
-### 6.2.3. Meus Pets — Listagem e Cadastro (`/tutor/pets`)
+### 6.2.3. Meus Pets (`/tutor/pets` — `MyPetsPage.tsx` + `PetCard.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
 |  SIDEBAR TUTOR    |  Meus Pets                      [ + Novo Pet ]       |
 |                   +------------------------------------------------------+
-|                   |  Buscar: [________________]  🔍                      |
-|                   |                                                      |
-|                   |  +---------------+  +---------------+  +----------+  |
-|                   |  | +----+        |  | +----+        |  | +----+   |  |
-|                   |  | |foto| Bob    |  | |foto| Luna   |  | |foto|   |  |
-|                   |  | +----+ Cão    |  | +----+ Gato   |  | +----+   |  |
-|                   |  | 11 anos       |  | 3 anos        |  |  ...     |  |
-|                   |  | [ Abrir ]     |  | [ Abrir ]     |  |          |  |
-|                   |  +---------------+  +---------------+  +----------+  |
+|                   |  +----------------+  +----------------+              |
+|                   |  | +----+  Bob     |  | +----+  Luna    |             |
+|                   |  | |foto| Cão·11a  |  | |foto| Gato·3a  |             |
+|                   |  | +----+ 8,2 kg   |  | +----+ 4,0 kg   |             |
+|                   |  | [Ver prontuário]|  | [Ver prontuário]|            |
+|                   |  | [Editar][Excluir]| | [Editar][Excluir]|           |
+|                   |  | [ Compartilhar ] |  | [ Compartilhar ] |          |
+|                   |  +----------------+  +----------------+              |
 +-------------------+------------------------------------------------------+
-
-   MODAL "Novo Pet"
-   +---------------------------------------------+
-   |  Cadastrar Pet                        [ x ] |
-   |  Nome   [__________]  Foto  [ 📷 upload ]   |
-   |  Espécie[____v]  Raça [__________]          |
-   |  Idade  [___]    Peso [____] kg             |
-   |  Microchip [____________________]           |
-   |                 [ Cancelar ]  [ Salvar ]    |
-   +---------------------------------------------+
 ```
-**Elementos:** grid de cards, busca, modal de CRUD (nome, foto, peso, microchip, idade, espécie, raça). Relaciona-se a **TUT-02** / **RF-02**.
+**Elementos:** grid de `PetCard` com ações reais — **Ver prontuário** (`/tutor/pets/:id/tratamentos`), **Editar** (`/tutor/pets/:id/editar`), **Excluir** (confirm) e **Compartilhar** (`SharePetButton` → `POST /api/shares/createshare`, gera código). Botão **+ Novo Pet** → `/tutor/pets/novo`. Relaciona-se a **TUT-02 / TUT-09** / **RF-02, RF-09**.
 
-### 6.2.4. Perfil do Pet — Abas Clínicas (`/tutor/pets/:petId`)
+### 6.2.4. Cadastro/Edição de Pet (`/tutor/pets/novo` e `/:petId/editar` — `PetFormPage.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
-|  SIDEBAR TUTOR    |  < Voltar   Bob  (Cão · 11a · 8,2kg)   [Editar][🗑]  |
+|  SIDEBAR TUTOR    |  < Voltar     Cadastrar / Editar Pet                 |
 |                   +------------------------------------------------------+
-|                   | [Visão geral][Vacinas][Tratamentos][Documentos]      |
-|                   | [Histórico][Diário][Rotina]                          |
-|                   +------------------------------------------------------+
-|                   |  VACINAS (leitura + confirmar)                       |
-|                   |  +------------------------------------------------+  |
-|                   |  | Vacina   | Aplicada | Próx. dose | Status      |  |
-|                   |  | V10      | 01/11/26 | 01/11/27   | [ Confirmar]|  |
-|                   |  | Antirráb.| 15/06/26 | 15/06/27   | ✔ Confirmada|  |
-|                   |  +------------------------------------------------+  |
-|                   |  TRATAMENTOS                                        |
-|                   |  Dipirona 25mg · 2x/dia · 7 dias                    |
-|                   |  Hoje:  08h [✔ dada]   20h [ marcar como dada ]     |
+|                   |  Foto     [ 📷 upload ]                              |
+|                   |  Nome     [________________]                         |
+|                   |  Espécie  [____v]   Raça  [________]                 |
+|                   |  Idade    [___]     Peso  [____] kg                  |
+|                   |  Microchip[__________________________]              |
+|                   |                       [ Cancelar ]  [ Salvar ]      |
 +-------------------+------------------------------------------------------+
 ```
-**Elementos:** navegação por abas; vacinas/tratamentos em **modo leitura/confirmação** (prescrição é do vet); upload de documentos, linha do tempo, diário e rotina editáveis. Relaciona-se a **TUT-03 a TUT-08**.
+**Elementos:** formulário com nome, foto, espécie, raça, idade, peso e microchip. Relaciona-se a **TUT-02** / **RF-02**.
 
-### 6.2.5. Diário do Pet (`/tutor/pets/:petId` → aba Diário)
+### 6.2.5. Prontuário do Pet — Abas (`/tutor/pets/:petId/tratamentos` e demais)
+
+```text
++-------------------+------------------------------------------------------+
+|  SIDEBAR TUTOR    |  < Voltar   Bob  (Cão · 11a · 8,2kg)                 |
+|                   +------------------------------------------------------+
+|                   | [Tratamentos][Vacinas][Consultas][Documentos][Diário]|
+|                   +------------------------------------------------------+
+|                   |  TRATAMENTOS                     [ + Novo tratamento]|
+|                   |  Dipirona 25mg · 2x/dia · 7 dias                     |
+|                   |  Hoje:  08h [✔ dada]   20h [ marcar como dada ]      |
+|                   +------------------------------------------------------+
+```
+**Elementos:** navegação por abas (Tratamentos, Vacinas, Consultas, Documentos, Diário); para o tutor, foco em **visualizar e dar check** na administração do medicamento. Relaciona-se a **TUT-03 a TUT-06** / **RF-03 a RF-06**.
+
+### 6.2.6. Diário do Pet (`/tutor/pets/:petId/diario` — `DiaryPage.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
@@ -251,57 +267,30 @@ Os wireframes a seguir representam a estrutura (lo-fi) das telas-chave em resolu
 |                   |  03/11  Vômito após troca de ração        [edit][x] |
 |                   |  02/11  Coçando a orelha esquerda          [edit][x]|
 |                   |  30/10  Mais disposto após caminhada       [edit][x]|
-|                   |                                                      |
-|                   |  MODAL Novo registro:                               |
-|                   |  Data [__/__/__]  Tipo [sintoma v]                   |
-|                   |  Descrição [______________________________]         |
-|                   |                      [ Cancelar ] [ Salvar ]        |
 +-------------------+------------------------------------------------------+
 ```
-**Elementos:** lista cronológica de ocorrências; CRUD de sintomas/comportamentos. Relaciona-se a **TUT-07** / **RF-08**.
+**Elementos:** lista cronológica; botão **+ Novo registro** leva a `/tutor/pets/:petId/diario/novo` (`DiaryFormPage.tsx`) — **visível apenas para o tutor**. Relaciona-se a **TUT-07** / **RF-08**.
 
-### 6.2.6. Contatos e Compartilhamento (`/tutor/contatos`)
+### 6.2.7. Dashboard do Veterinário (`/vet` — `VetHomePage.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
-|  SIDEBAR TUTOR    |  Contatos e Compartilhamento                        |
-|                   +------------------------------------------------------+
-|                   |  Veterinários com acesso ao perfil de Bob:          |
-|                   |  • Dra. Mariana Costa (CRMV 12345)  [ Revogar ]     |
-|                   |                                                      |
-|                   |  Compartilhar acesso                                |
-|                   |  Gere um código e informe ao veterinário:           |
-|                   |            +-------------------------+                |
-|                   |            |      A7X9-K2PQ           |               |
-|                   |            +-------------------------+                |
-|                   |      [ Gerar novo código ]  [ Copiar ]              |
-+-------------------+------------------------------------------------------+
-```
-**Elementos:** lista de acessos concedidos com revogação; geração do código de 8 caracteres. Relaciona-se a **TUT-09** / **RF-09**.
-
-### 6.2.7. Dashboard do Veterinário (`/vet`)
-
-```text
-+-------------------+------------------------------------------------------+
-|  🐾 PetLife VET   |  Dra. Mariana Costa · CRMV 12345   [🔔]  [ Sair ]    |
+|  🐾 PetLife VET   |  Dr(a). Mariana · CRMV 12345     [🔔]   [ Sair ]     |
 |                   +------------------------------------------------------+
 |  [▸] Início       |  +---------------------------+                       |
 |  [ ] Pacientes    |  | PACIENTES ATIVOS:   18    |                       |
-|  [ ] Consultas    |  +---------------------------+                       |
-|  [ ] Minha Conta  |                                                      |
-|                   |  Buscar paciente: [__________________] 🔍           |
-|                   |  (nome, tutor, espécie ou raça)                     |
-|                   |                                                      |
-|                   |  +-------------+  +-------------+  +-------------+   |
-|                   |  | 🐶 Bob      |  | 🐱 Luna     |  | 🐶 Zeus     |   |
+|  [ ] Novo Pac.    |  +---------------------------+                       |
+|  [ ] Calendário   |  Buscar: [__________________] 🔍                     |
+|  [ ] Notificações |  (nome, tutor, espécie ou raça)                      |
+|  [ ] Perfil       |  +-------------+  +-------------+  +-------------+   |
+|  [ ] Relatórios   |  | 🐶 Bob      |  | 🐱 Luna     |  | 🐶 Zeus     |   |
 |                   |  | Tutor:Helena|  | Tutor: Ana  |  | Tutor: João |   |
 |                   |  | [Prontuário]|  | [Prontuário]|  | [Prontuário]|   |
-|                   |  +-------------+  +-------------+  +-------------+   |
 +-------------------+------------------------------------------------------+
 ```
-**Elementos:** cabeçalho com CRMV, card métrico de pacientes ativos, busca preditiva, grid de `VetPatientCard`. Relaciona-se a **VET-09/10**.
+**Elementos:** cabeçalho com CRMV, card de pacientes ativos, busca preditiva, grid de cards. Menu lateral: Início, Pacientes, Novo Paciente, Calendário, Notificações, Perfil, Relatórios. Relaciona-se a **VET-09/10**.
 
-### 6.2.8. Gestão de Pacientes (`/vet/pacientes`)
+### 6.2.8. Gestão de Pacientes (`/vet/pacientes` — `VetPatientsPage.tsx`)
 
 ```text
 +-------------------+------------------------------------------------------+
@@ -309,82 +298,95 @@ Os wireframes a seguir representam a estrutura (lo-fi) das telas-chave em resolu
 |                   +------------------------------------------------------+
 |                   |  Buscar: [______________] 🔍                        |
 |                   |  +------------------------------------------------+  |
-|                   |  |Foto| Pet  |Espécie|Raça   |Tutor  |Últ.consulta|  |
-|                   |  |[  ]| Bob  | Cão   |SRD    |Helena |01/11/2026  |  |
-|                   |  |[  ]| Luna | Gato  |Siamês |Ana    |28/10/2026  |  |
-|                   |  |    |      |       |       |       |[Abrir pront]| |
+|                   |  |Foto| Pet  |Espécie|Raça  |Tutor |Últ.consulta  |  |
+|                   |  |[  ]| Bob  | Cão   |SRD   |Helena|01/11/2026    |  |
+|                   |  |    |      |       |      |      |[Abrir prontu.]| |
 |                   |  +------------------------------------------------+  |
 +-------------------+------------------------------------------------------+
 
-   MODAL "Novo Paciente"
+   MODAL "Novo Paciente" (/vet/pacientes/novo)
    +---------------------------------------------+
    |  Vincular paciente                    [ x ] |
    |  Código de compartilhamento (8 dígitos):    |
    |  [ A 7 X 9 - K 2 P Q ]                       |
    |             [ Cancelar ]  [ Vincular ]      |
-   |  ✔ Paciente vinculado com sucesso           |
    +---------------------------------------------+
 ```
-**Elementos:** tabela com foto/espécie/raça/tutor/última consulta, busca textual, botão Abrir Prontuário, modal de vínculo via código (POST `/api/shares/redeemsharecode`). Relaciona-se a **VET-09** / **RF-09**.
+**Elementos:** tabela (foto, espécie, raça, tutor, última consulta), busca, **Abrir prontuário** (`/vet/pacientes/:id/consultas`), modal de vínculo via código (`redeemPatientShareCode` → `POST /api/shares/redeemsharecode`). Relaciona-se a **VET-09** / **RF-09**.
 
-### 6.2.9. Prontuário do Paciente — Veterinário (`/vet/pacientes/:petId`)
+### 6.2.9. Prontuário do Paciente — Veterinário (`/vet/pacientes/:petId/consultas` e abas)
 
 ```text
 +-------------------+------------------------------------------------------+
-|  SIDEBAR VET      |  Prontuário · Bob (Cão · 11a · 8,2kg) · Tutor:Helena |
+|  SIDEBAR VET      |  Prontuário · Bob (Cão · 11a) · Tutor: Helena        |
 |                   +------------------------------------------------------+
-|                   | [Consultas][Vacinas][Tratamentos][Exames]            |
-|                   | [Histórico][Diário 👁][Rotina 👁]                     |
+|                   | [Consultas][Vacinas][Tratamentos][Documentos][Diário]|
 |                   +------------------------------------------------------+
-|                   |  NOVA CONSULTA / DIAGNÓSTICO       [ + Registrar ]   |
-|                   |  +------------------------------------------------+  |
-|                   |  | 01/11  Consulta de rotina — sem alterações     |  |
-|                   |  | 15/06  Otite tratada com antibiótico           |  |
-|                   |  +------------------------------------------------+  |
-|                   |                                                      |
-|                   |  PRESCREVER TRATAMENTO                               |
-|                   |  Medicamento[________] Dose[____] Freq[__] Dur[__]  |
-|                   |                        [ Encerrar ] [ Salvar ]      |
+|                   |  CONSULTAS                        [ + Nova consulta ]|
+|                   |  01/11  Consulta de rotina — sem alterações  [ed][x]|
+|                   |  15/06  Otite tratada com antibiótico        [ed][x]|
 +-------------------+------------------------------------------------------+
 ```
-**Elementos:** abas clínicas; consultas/vacinas/tratamentos/exames **editáveis**; diário e rotina marcados com 👁 (**somente leitura**). Relaciona-se a **VET-02 a VET-08**.
+**Elementos:** abas clínicas; consultas, vacinas, tratamentos e documentos **editáveis** (`isVet = true`, botões "+ Nova/Novo" e editar/excluir por item); aba **Diário em somente leitura** (sem "+ Novo registro"). Relaciona-se a **VET-02 a VET-08**.
 
-### 6.2.10. Estrutura de Layout Base e Sidebar
+### 6.2.10. Relatórios do Veterinário (`/vet/relatorios` — `ReportsPage.tsx`)
 
 ```text
-+----------------------+   TUTOR: gradiente laranja/rosa
-|  🐾 PetLife          |   VET:   gradiente ciano/azul
++-------------------+------------------------------------------------------+
+|  SIDEBAR VET      |  Relatórios                                         |
+|                   +------------------------------------------------------+
+|                   |  Paciente [____v]  Período [__/__ a __/__]           |
+|                   |  Tipo [ Vacinas | Tratamentos | Consultas ]          |
+|                   |              [ Gerar relatório ]  [ Baixar PDF ]     |
++-------------------+------------------------------------------------------+
+```
+**Elementos:** geração e download de relatórios consolidados (`reportService.ts` → `downloadReportPdf`). Relaciona-se a **RF-11**.
+
+### 6.2.11. Layout Base e Sidebar (`Sidebar.tsx` / `VetSidebar.tsx`)
+
+```text
++----------------------+   TUTOR: identidade visual laranja/rosa
+|  🐾 PetLife          |   VET:   identidade visual ciano/azul
 |----------------------|
 |  [▸] Início          |   ← item ativo destacado
-|  [ ] (módulos)       |
-|      ...             |
+|  [ ] (demais itens)  |
 |----------------------|
 |  +----------------+  |
-|  | 👤  Nome        |  |   ← rodapé: avatar, nome,
-|  |    Perfil/CRMV  |  |      perfil/CRMV
-|  |  [  Logout  ]   |  |   ← logout universal c/ confirmação
+|  | 👤  Nome        |  |   ← rodapé: avatar, nome, perfil/CRMV
+|  |    Perfil/CRMV  |  |      (link para /tutor/perfil ou /vet/perfil)
+|  |  [   Sair   ]   |  |   ← logout: limpa sessão e vai para /login
 |  +----------------+  |
 +----------------------+
 ```
-**Elementos:** `aside` persistente, estilização diferenciada por perfil, indicação de rota ativa, rodapé com dados do usuário e logout. Responsivo: colapsa em menu hambúrguer no mobile (RNF-02).
+**Elementos:** `aside` persistente com itens de menu reais, indicação de rota ativa, rodapé com dados do usuário e botão **Sair** (`logout()` + `navigate("/login")`).
 
 ---
 
-## 6.3. Rastreabilidade (Telas × Requisitos × Histórias)
+## 6.3. Rastreabilidade (Telas × Rotas reais × Requisitos × Histórias)
 
-| Tela / Fluxo                     | Rota                         | Requisito(s)      | História(s)              |
-| :------------------------------- | :--------------------------- | :---------------- | :----------------------- |
-| Login / Cadastro                 | `/login`, `/cadastro`        | RF-01             | TUT-01, VET-01           |
-| Dashboard do Tutor               | `/tutor`                     | RF-02, RF-03, RF-04 | TUT-02, TUT-03, TUT-04 |
-| Meus Pets (CRUD)                 | `/tutor/pets`                | RF-02             | TUT-02                   |
-| Perfil do Pet (abas clínicas)    | `/tutor/pets/:petId`         | RF-03 a RF-06     | TUT-03 a TUT-06          |
-| Diário do Pet                    | `/tutor/pets/:petId` (aba)   | RF-08             | TUT-07                   |
-| Rotina e Cuidados                | `/tutor/pets/:petId` (aba)   | RF-07             | TUT-08                   |
-| Agenda / Consultas (Tutor)       | `/tutor/agenda`              | RF-07             | TUT-10                   |
-| Contatos e Compartilhamento      | `/tutor/contatos`            | RF-09             | TUT-09                   |
-| Dashboard do Veterinário         | `/vet`                       | RF-02, RF-06      | VET-09, VET-10           |
-| Gestão de Pacientes              | `/vet/pacientes`             | RF-09             | VET-09                   |
-| Prontuário do Paciente           | `/vet/pacientes/:petId`      | RF-03 a RF-06     | VET-02 a VET-08          |
-| Minhas Consultas (Vet)           | `/vet/agenda`                | RF-07             | VET-10                   |
+| Tela / Fluxo                     | Rota real (`AppRouter.tsx`)             | RF                | História(s)        |
+| :------------------------------- | :-------------------------------------- | :---------------- | :----------------- |
+| Home pública                     | `/`                                     | —                 | —                  |
+| Login                            | `/login`                                | RF-01             | TUT-01, VET-01     |
+| Cadastro / Escolha de perfil     | `/register`, `/register-role`           | RF-01             | TUT-01, VET-01     |
+| Dashboard do Tutor               | `/tutor`                                | RF-02 a RF-04     | TUT-02/03/04       |
+| Meus Pets                        | `/tutor/pets`                           | RF-02             | TUT-02             |
+| Cadastro/Edição de Pet           | `/tutor/pets/novo`, `/:petId/editar`    | RF-02             | TUT-02             |
+| Prontuário Tutor — Tratamentos   | `/tutor/pets/:petId/tratamentos`        | RF-04             | TUT-04             |
+| Prontuário Tutor — Vacinas       | `/tutor/pets/:petId/vacinas`            | RF-03             | TUT-03             |
+| Prontuário Tutor — Consultas     | `/tutor/pets/:petId/consultas`          | RF-06             | TUT-06             |
+| Prontuário Tutor — Documentos    | `/tutor/pets/:petId/documentos`         | RF-05             | TUT-05             |
+| Diário do Pet                    | `/tutor/pets/:petId/diario` (+ `/novo`) | RF-08             | TUT-07             |
+| Calendário do Tutor              | `/tutor/calendario`                     | RF-07             | TUT-08, TUT-10     |
+| Buscar                           | `/tutor/buscar`                         | RF-02             | TUT-02             |
+| Dashboard do Veterinário         | `/vet`                                  | RF-02, RF-06      | VET-09/10          |
+| Gestão de Pacientes              | `/vet/pacientes`                        | RF-09             | VET-09             |
+| Vincular Paciente                | `/vet/pacientes/novo`                   | RF-09             | VET-09             |
+| Prontuário Vet — Consultas       | `/vet/pacientes/:petId/consultas`       | RF-06             | VET-06             |
+| Prontuário Vet — Vacinas         | `/vet/pacientes/:petId/vacinas`         | RF-03             | VET-03             |
+| Prontuário Vet — Tratamentos     | `/vet/pacientes/:petId/tratamentos`     | RF-04             | VET-04             |
+| Prontuário Vet — Documentos      | `/vet/pacientes/:petId/documentos`      | RF-05             | VET-05             |
+| Prontuário Vet — Diário (leitura)| `/vet/pacientes/:petId/diario`          | RF-08             | VET-07             |
+| Relatórios                       | `/vet/relatorios`                       | RF-11             | —                  |
 
-> **Regra de permissão transversal (RNF-03):** vacinas e tratamentos são **criados/editados exclusivamente pelo Veterinário**; o Tutor apenas visualiza e confirma administração. Diário e rotina são **do Tutor**; o Veterinário apenas visualiza.
+> **Observação de permissão (RNF-03), conforme o código:** no **Diário**, somente o Tutor cria registros (botão "+ Novo registro" condicionado a `!isVet`); o Veterinário visualiza. Nas abas de Vacinas, Tratamentos, Consultas e Documentos, a flag `isVet` controla a edição por item. Os itens de menu **Notificações**, **Perfil** e **Calendário (Vet)** estão presentes nas sidebars, porém ainda sem `<Route>` dedicada no `AppRouter.tsx` (pendência de implementação).
