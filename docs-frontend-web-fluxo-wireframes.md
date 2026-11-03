@@ -122,6 +122,10 @@ flowchart LR
     inicioV --> pv2["Acessa<br/>notificações"]
     pv2 --> av6["Visualiza notificações de<br/>alterações dos dados dos<br/>pacientes"]
 
+    inicioV --> pvRel["Acessa página<br/>de relatórios"]
+    pvRel --> avRel1["Cria, edita e deleta<br/>modelos de relatório"]
+    pvRel --> avRel2["Gera e baixa relatório<br/>em PDF"]
+
     inicioV --> pv3["Acessa página<br/>de perfil pessoal"]
     pv3 --> av7["Aceita/recusa solicitação<br/>de vínculo com pet"]
     pv3 --> altera["Altera dados<br/>pessoais"]
@@ -133,8 +137,8 @@ flowchart LR
     classDef acaoV fill:#fff7ed,stroke:#fdba74,color:#7c2d12;
     classDef logV fill:#fed7aa,stroke:#f97316,color:#7c2d12;
     classDef inicioFimV fill:#fb923c,stroke:#ea580c,color:#ffffff;
-    class inicioV,pv1,pv2,pv3 vet;
-    class av1,av2,av3,av4,av5,av6,av7,altera,vinculo,deslogaV acaoV;
+    class inicioV,pv1,pv2,pvRel,pv3 vet;
+    class av1,av2,av3,av4,av5,av6,avRel1,avRel2,av7,altera,vinculo,deslogaV acaoV;
     class logaVet logV;
     class fimV inicioFimV;
 ```
