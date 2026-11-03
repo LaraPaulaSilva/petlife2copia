@@ -685,7 +685,7 @@ Wireframes (lo-fi) das telas-chave em resolução **desktop**, baseados nas pág
 
 | Tela / Fluxo                     | Rota real (`AppRouter.tsx`)             | RF                | História(s)        |
 | :------------------------------- | :-------------------------------------- | :---------------- | :----------------- |
-| Home pública                     | `/`                                     | —                 | —                  |
+| Home pública (landing page)      | `/`                                     | N/A (institucional) | N/A (pré-login)  |
 | Login                            | `/login`                                | RF-01             | TUT-01, VET-01     |
 | Cadastro / Escolha de perfil     | `/register`, `/register-role`           | RF-01             | TUT-01, VET-01     |
 | Dashboard do Tutor               | `/tutor`                                | RF-02 a RF-04     | TUT-02/03/04       |
@@ -707,6 +707,8 @@ Wireframes (lo-fi) das telas-chave em resolução **desktop**, baseados nas pág
 | Prontuário Vet — Documentos      | `/vet/pacientes/:petId/documentos`      | RF-05             | VET-05             |
 | Prontuário Vet — Diário (leitura)| `/vet/pacientes/:petId/diario`          | RF-08             | VET-07             |
 | Relatórios                       | `/vet/relatorios`                       | RF-11             | —                  |
+
+> **Sobre o "N/A":** a **Home pública** (`/`) é a *landing page* institucional de apresentação do produto (botões "Entrar" e "Criar conta"). Ela **tem rota real** (`/`), mas **não implementa nenhum Requisito Funcional** nem deriva de uma História de Usuário, pois ocorre **antes do login** — quando o usuário ainda não assumiu o perfil de Tutor ou Veterinário. O mesmo vale para a coluna "História(s)" de **Relatórios**, cuja origem é o requisito RF-11 (geração de relatórios), sem uma história TUT/VET específica no backlog atual.
 
 > **Observação de permissão (RNF-03), conforme o código:** no **Diário**, somente o Tutor cria registros (botão "+ Novo registro" condicionado a `!isVet`); o Veterinário visualiza. Nas abas de Vacinas, Tratamentos, Consultas e Documentos, a flag `isVet` controla a edição por item. Os itens de menu **Notificações**, **Perfil** e **Calendário (Vet)** estão presentes nas sidebars, porém ainda sem `<Route>` dedicada no `AppRouter.tsx` (pendência de implementação).
 
